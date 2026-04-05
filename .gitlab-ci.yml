@@ -1,0 +1,150 @@
+stages:
+  - lint
+  - build
+  - security_scan
+  - test
+  - quality
+  - package
+  - review
+  - staging
+  - production
+  - validation
+
+variables:
+  IMAGE_NAME: $CI_REGISTRY_IMAGE:$CI_COMMIT_SHORT_SHA
+  APP_NAME: flask-app
+  DOCKER_DRIVER: overlay2
+  DOCKER_TLS_CERTDIR: "/certs"
+
+# =========================
+# LINT
+# =========================
+flake8_lint:
+  stage: lint
+  image: python:3.11
+  before_script:
+    - pip install flake8
+  script:
+    - flake8 . --ignore=E501,E303
+
+hadolint_check:
+  stage: lint
+  image: hadolint/hadolint:latest-debian
+  script:
+    - hadolint Dockerfile
+
+# =========================
+# BUILD
+# =========================
+build_image:
+  stage: build
+  image: docker:latest
+  services:
+    - docker:dind
+  script:
+    - docker build -t $IMAGE_NAME .
+  rules:
+    - if: '$CI_COMMIT_BRANCH'
+
+# =========================
+# SECURITY SCAN
+# =========================
+trivy_scan:
+  stage: security_scan
+  image: aquasec/trivy:latest
+  services:
+    - docker:dind
+  script:
+    - trivy image --exit-code 0 --severity HIGH,CRITICAL $IMAGE_NAME
+
+# =========================
+# TESTS
+# =========================
+unit_tests:
+  stage: test
+  image: python:3.11
+  before_script:
+    - pip install -r requirements.txt
+    - pip install pytest
+  script:
+    - pytest
+
+# =========================
+# CODE QUALITY
+# =========================
+sonar_quality:
+  stage: quality
+  image: sonarsource/sonar-scanner-cli:latest
+  script:
+    - sonar-scanner
+  only:
+    - branches
+    - merge_requests
+
+# =========================
+# PACKAGE
+# =========================
+package_image:
+  stage: package
+  image: docker:latest
+  services:
+    - docker:dind
+  script:
+    - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY
+    - docker push $IMAGE_NAME
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+
+# =========================
+# REVIEW ENVIRONMENT
+# =========================
+deploy_review:
+  stage: review
+  script:
+    - echo "Deploying review environment..."
+    - ssh $SSH_USER@$SSH_HOST "docker pull $IMAGE_NAME && docker run -d -p 5001:5000 --name review_app $IMAGE_NAME"
+  environment:
+    name: review/$CI_COMMIT_REF_NAME
+    url: http://$SSH_HOST:5001
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+
+# =========================
+# STAGING
+# =========================
+deploy_staging:
+  stage: staging
+  script:
+    - echo "Deploying to staging..."
+    - ssh $SSH_USER@$SSH_HOST "docker pull $IMAGE_NAME && docker stop staging_app || true && docker rm staging_app || true && docker run -d -p 5002:5000 --name staging_app $IMAGE_NAME"
+  environment:
+    name: staging
+    url: http://$SSH_HOST:5002
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+
+# =========================
+# PRODUCTION
+# =========================
+deploy_production:
+  stage: production
+  script:
+    - echo "Deploying to production..."
+    - ssh $SSH_USER@$SSH_HOST "docker pull $IMAGE_NAME && docker stop prod_app || true && docker rm prod_app || true && docker run -d -p 80:5000 --name prod_app $IMAGE_NAME"
+  environment:
+    name: production
+    url: http://$SSH_HOST
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+
+# =========================
+# DEPLOYMENT VALIDATION
+# =========================
+validate_deployment:
+  stage: validation
+  image: curlimages/curl:latest
+  script:
+    - curl -f http://$SSH_HOST || exit 1
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
