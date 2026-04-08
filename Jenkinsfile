@@ -2,7 +2,7 @@ pipeline {
     agent none
     environment {
         DOCKERHUB_AUTH = credentials('DOCKER_HUB_ID')
-        SSH_AUTH_KEY = credentials('SSH_AUTH_KEY')
+        // SSH_AUTH_KEY = credentials('SSH_AUTH_KEY')
         DOCKERHUB_USERNAME = 'kreys326'
         IMAGE_NAME = 'alpinehelloworld'
         IMAGE_TAG = 'v1'
