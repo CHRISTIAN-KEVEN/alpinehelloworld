@@ -66,7 +66,7 @@ pipeline {
         }
         stage('Deploy to prod') {
             when {
-                expression { env.BRANCH_NAME == 'origin/master' }
+                expression { env.BRANCH_NAME == 'origin/main' }
             }
             environment {
                 PROD_ID = "51.20.106.82"
