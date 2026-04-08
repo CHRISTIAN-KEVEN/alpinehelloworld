@@ -8,6 +8,7 @@ pipeline {
         IMAGE_TAG = 'v1'
         PORT_EXPOSED = '80' 
     }
+
     stages {
         stage('Build') {
             agent any
@@ -25,7 +26,7 @@ pipeline {
                           docker rm -f ${IMAGE_NAME} || echo 'Container does not exist'
                           docker run --name ${IMAGE_NAME} -d -p ${PORT_EXPOSED}:80 ${DOCKERHUB_USERNAME}/${IMAGE_NAME}:${IMAGE_TAG}
                           sleep 15
-                          curl http://172.17.0.1:${PORT_EXPOSED} | grep -q "Hello world"
+                          curl http://localhost:${PORT_EXPOSED} | grep -q "Hello world"
                     '''
                 }
             }
@@ -43,54 +44,54 @@ pipeline {
                 }
             }
         }
-        // stage('Deploy to stage') {
-        //     environment {
-        //         STAGING_IP = "13.60.5.88"
-        //     }
-        //     agent any
-        //     steps {
-        //         sshagent(['SSH_AUTH_KEY']) {
-        //             sh '''
-        //                 ssh -o StrictHostKeyChecking=no ubuntu@$STAGING_IP "
-        //                     docker rm -f $IMAGE_NAME || echo 'All deleted' && \
-        //                     docker pull $DOCKERHUB_USERNAME/$IMAGE_NAME:$IMAGE_TAG || echo 'Image Download successfully' && \
-        //                     docker run --rm -dp $PORT_EXPOSED:80 --name $IMAGE_NAME $DOCKERHUB_USERNAME/$IMAGE_NAME:$IMAGE_TAG && \
-        //                     sleep 15 && \
-        //                     curl -I http://localhost:$PORT_EXPOSED && \
-        //                     echo 'Deployment successful'
-        //                 "
-        //             '''
-        //         }
-        //     }
-        // }
-        // stage('Deploy to prod') {
-        //     when {
-        //         expression { env.BRANCH_NAME == 'origin/main' }
-        //     }
-        //     environment {
-        //         PROD_ID = "51.20.106.82"
-        //     }
-        //     agent any
-        //     steps {
-        //         sshagent(['SSH_AUTH_KEY']) {
-        //             sh '''
-        //                 mkdir -p ~/.ssh
-        //                 chmod 0700 ~/.ssh
-        //                 ssh-keyscan -t ed25519 -H $PROD_ID >> ~/.ssh/known_hosts
-        //                 ssh ubuntu@$PROD_ID "
-        //                     docker rm -f ${IMAGE_NAME} || echo 'Already deleted' && \
-        //                     docker pull ${DOCKERHUB_USERNAME}/${IMAGE_NAME}:${IMAGE_TAG} || echo 'Image Download successfully' && \
-        //                     docker run --rm -d -p $PORT_EXPOSED:80 --name $IMAGE_NAME ${DOCKERHUB_USERNAME}/${IMAGE_NAME}:${IMAGE_TAG} && \
-        //                     sleep 15 && \
-        //                     curl -I http://localhost:$PORT_EXPOSED && \
-        //                     echo 'Deployment successful'
-        //                 "
+        stage('Deploy to stage') {
+            environment {
+                STAGING_IP = "13.60.5.88"
+            }
+            agent any
+            steps {
+                sshagent(['SSH_AUTH_KEY']) {
+                    sh '''
+                        ssh -o StrictHostKeyChecking=no ubuntu@$STAGING_IP "
+                            docker rm -f $IMAGE_NAME || echo 'All deleted' && \
+                            docker pull $DOCKERHUB_USERNAME/$IMAGE_NAME:$IMAGE_TAG || echo 'Image Download successfully' && \
+                            docker run --rm -dp $PORT_EXPOSED:80 --name $IMAGE_NAME $DOCKERHUB_USERNAME/$IMAGE_NAME:$IMAGE_TAG && \
+                            sleep 15 && \
+                            curl -I http://localhost:$PORT_EXPOSED && \
+                            echo 'Deployment successful'
+                        "
+                    '''
+                }
+            }
+        }
+        stage('Deploy to prod') {
+            when {
+                expression { env.BRANCH_NAME == 'origin/main' }
+            }
+            environment {
+                PROD_ID = "51.20.106.82"
+            }
+            agent any
+            steps {
+                sshagent(['SSH_AUTH_KEY']) {
+                    sh '''
+                        mkdir -p ~/.ssh
+                        chmod 0700 ~/.ssh
+                        ssh-keyscan -t ed25519 -H $PROD_ID >> ~/.ssh/known_hosts
+                        ssh ubuntu@$PROD_ID "
+                            docker rm -f ${IMAGE_NAME} || echo 'Already deleted' && \
+                            docker pull ${DOCKERHUB_USERNAME}/${IMAGE_NAME}:${IMAGE_TAG} || echo 'Image Download successfully' && \
+                            docker run --rm -d -p $PORT_EXPOSED:80 --name $IMAGE_NAME ${DOCKERHUB_USERNAME}/${IMAGE_NAME}:${IMAGE_TAG} && \
+                            sleep 15 && \
+                            curl -I http://localhost:$PORT_EXPOSED && \
+                            echo 'Deployment successful'
+                        "
                         
-        //             '''
-        //         }
-        //     }
+                    '''
+                }
+            }
             
 
-        // }
+        }
     }
 }
