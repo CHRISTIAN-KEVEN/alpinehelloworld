@@ -26,7 +26,7 @@ pipeline {
                           docker rm -f ${IMAGE_NAME} || echo 'Container does not exist'
                           docker run --name ${IMAGE_NAME} -d -p ${PORT_EXPOSED}:5000 -e PORT=5000 ${DOCKERHUB_USERNAME}/${IMAGE_NAME}:${IMAGE_TAG}
                           sleep 15
-                          curl http://localhost:${PORT_EXPOSED} | grep -q "Hello world!"
+                          curl http://172.17.0.1:${PORT_EXPOSED} | grep -q "Hello world!"
                     '''
                 }
             }
