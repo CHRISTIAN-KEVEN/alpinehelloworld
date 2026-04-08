@@ -1,3 +1,4 @@
+// Inconsequential comment
 pipeline {
      environment {
        ID_DOCKER = "${ID_DOCKER_PARAMS}"
