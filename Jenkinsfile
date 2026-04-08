@@ -3,7 +3,6 @@ pipeline {
         DOCKERHUB_AUTH = credentials('DOCKER_HUB_ID')
         SSH_AUTH_KEY = credentials('SSH_AUTH_KEY')
         DOCKERHUB_USERNAME = 'kreys326'
-        PORT_EXPOSED = '80'
         IMAGE_NAME = 'alpinehelloworld'
         IMAGE_TAG = 'v1'
         PORT_EXPOSED = '80' 
