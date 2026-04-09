@@ -55,7 +55,7 @@ pipeline {
                         ssh -o StrictHostKeyChecking=no ubuntu@$STAGING_IP "
                             docker rm -f $IMAGE_NAME || echo 'All deleted' && \
                             docker pull $DOCKERHUB_USERNAME/$IMAGE_NAME:$IMAGE_TAG || echo 'Image Download successfully' && \
-                            docker run --rm -dp $PORT_EXPOSED:80 --name $IMAGE_NAME $DOCKERHUB_USERNAME/$IMAGE_NAME:$IMAGE_TAG && \
+                            docker run --rm -dp $PORT_EXPOSED:5000 -e PORT=5000 --name $IMAGE_NAME $DOCKERHUB_USERNAME/$IMAGE_NAME:$IMAGE_TAG && \
                             sleep 15 && \
                             curl -I http://localhost:$PORT_EXPOSED && \
                             echo 'Deployment successful'
@@ -81,7 +81,7 @@ pipeline {
                         ssh ubuntu@$PROD_ID "
                             docker rm -f ${IMAGE_NAME} || echo 'Already deleted' && \
                             docker pull ${DOCKERHUB_USERNAME}/${IMAGE_NAME}:${IMAGE_TAG} || echo 'Image Download successfully' && \
-                            docker run --rm -d -p $PORT_EXPOSED:80 --name $IMAGE_NAME ${DOCKERHUB_USERNAME}/${IMAGE_NAME}:${IMAGE_TAG} && \
+                            docker run --rm -d -p $PORT_EXPOSED:5000 -e PORT=5000 --name $IMAGE_NAME ${DOCKERHUB_USERNAME}/${IMAGE_NAME}:${IMAGE_TAG} && \
                             sleep 15 && \
                             curl -I http://localhost:$PORT_EXPOSED && \
                             echo 'Deployment successful'
